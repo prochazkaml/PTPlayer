@@ -58,6 +58,66 @@ int PTPlayer_UnpackFile(uint8_t *filedata, buffer_t *buffer) {
 		PTPlayer_Reset(buffer);
 
 		return 0;
+	} else if(!memcmp(filedata, "\x08POLYTONE", 9)) {
+		// Unpack Polytone data
+
+		buffer->channels = filedata[0x0B];
+		buffer->orders = (filedata[0x0C]) ? filedata[0x0C] : 256;
+
+		memcpy(buffer->ordertable, filedata + 0x0D, buffer->orders);
+
+		uint8_t *in = filedata + 0x0D + buffer->orders;
+		uint8_t rowid, chnlid, eff;
+		unpacked_t *i;
+		uint8_t oldeff[16];
+
+		memset(buffer->data, 0, sizeof(buffer->data));
+
+		for(int p = 0; p < filedata[0x0A]; p++) {
+			memset(oldeff, 0, sizeof(oldeff));
+
+			for(int r = 0; r < 64; r++) {
+				if(((rowid = *in) & 63) == r) {
+					in++;
+
+					if(!(rowid & 64)) for(int c = 0; c < buffer->channels; c++) {
+						if(((chnlid = *in) & 15) == c) {
+							in++;
+
+							i = &buffer->data[p][r][c];
+
+							if(chnlid & 0x40) {
+								i->note = *(in++);
+							}
+
+							if(chnlid & 0x20) {
+								eff = *(in++);
+
+								i->effect = eff & 0xF;
+
+								if((eff >> 4) == 0xE) {
+									i->effectval = oldeff[c];
+								} else if((eff >> 4) == 0xF) {
+									i->effectval = *(in++);
+								} else {
+									i->effectval = eff >> 4;
+								}
+
+								oldeff[c] = i->effectval;
+							}
+
+							if(chnlid & 0x80) break;
+						}
+					}
+
+					if(rowid & 128) break;
+				}
+			}
+		}
+
+		PTPlayer_Reset(buffer);
+
+		return 0;
 	} else {
 		return -1;
 	}
