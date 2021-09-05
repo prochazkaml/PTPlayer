@@ -1,5 +1,27 @@
 #include <stdint.h>
 
+#define MAX_PT_SIZE (\
+	0x0D /* File header */ + \
+	256 /* Order table */ + \
+	256 /* Patterns */ * ( \
+	64 * (1 /* Row records */ + \
+	16 * 4 /* Channel entries */ )))
+
+typedef struct {
+	uint8_t note;
+	uint8_t effect;
+	uint8_t effectval;
+	uint8_t unused;
+} unpacked_t;
+
+typedef struct {
+	int orders, channels;
+
+	uint8_t ordertable[256];
+
+	unpacked_t data[256][64][16];
+} buffer_t;
+
 typedef struct {
 	int16_t interval, freq, portafreq, effectraw;
 	uint8_t enabled, active;
@@ -12,15 +34,16 @@ typedef struct {
 } channel_t;
 
 typedef struct {
-	uint16_t *data, *rowdata;
+	buffer_t *buf;
 
-	uint8_t patterns, channels, ordertable[256];
-	int row, order, orders, tempo, tempotick, audiospeed, audiotick;
+	int row, order, tempo, tempotick, audiospeed, audiotick;
+	int samplesplayed;
 
-	channel_t channel[12];
+	channel_t channel[16];
 } songstatus_t;
 
-int PTPlayer_Init(uint8_t *filedata);
+int PTPlayer_UnpackFile(uint8_t *filedata, buffer_t *buffer);
+void PTPlayer_Reset(buffer_t *buffer);
 songstatus_t *PTPlayer_GetStatus();
 void PTPlayer_ProcessTick();
 int PTPlayer_PlayInt16(int16_t *buf, int bufsize, int audiofreq);

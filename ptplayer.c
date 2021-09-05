@@ -2,7 +2,7 @@
 #include <math.h>
 #include <string.h>
 
-#define maxchannels 12
+#define maxchannels 16
 #define IBN 8
 #define maxnote (3 + (8 * 12) + 1)
 #define vibtablesize 32
@@ -13,32 +13,83 @@ songstatus_t s;
 short notesHz[maxnote * IBN];
 short VibTable[vibtablesize];
 
-int samplesplayed;
+int PTPlayer_UnpackFile(uint8_t *filedata, buffer_t *buffer) {
+	if(filedata[0x0B] > maxchannels)
+		return -1;
 
-int PTPlayer_Init(uint8_t *filedata) {
-	int i, ch;
-	
-	if(filedata[0x5D] > maxchannels || memcmp(filedata + 1, "MONOTONE", 8)) {
+	if(!memcmp(filedata, "\x08MONOTONE", 9)) {
+		// Convert Monotone data
+
+		int orders;
+
+		for(orders = 0; orders < 256; orders++) {
+			if(filedata[0x5F + orders] == 0xFF) break;
+
+			buffer->ordertable[orders] = filedata[0x5F + orders];
+		}
+
+		buffer->orders = orders;
+		buffer->channels = filedata[0x5D];
+
+		uint16_t *in = (uint16_t *)(filedata + 0x15F);
+		int ptr;
+		unpacked_t *i;
+
+		const uint8_t effect_lut[] = {
+			0, 1, 2, 3, 4, 0xB, 0xD, 0xF
+		};
+
+		for(int p = 0; p < filedata[0x5C]; p++) {
+			for(int r = 0; r < 64; r++) {
+				for(int c = 0; c < buffer->channels; c++) {
+					ptr = ((p * 64) + r) * buffer->channels + c;
+					i = &buffer->data[p][r][c];
+					i->note = in[ptr] >> 9;
+					i->effect = effect_lut[(in[ptr] >> 6) & 7];
+					i->effectval = (i->effect == 0 || i->effect == 4) ?
+					(((in[ptr] & 0x38) << 1) | (in[ptr] & 7)) :
+					(in[ptr] & 0x3F);
+				}
+			}
+		}
+
+		PTPlayer_Reset(buffer);
+
 		return 0;
+	} else {
+		return -1;
 	}
+}
 
+void PTPlayer_Reset(buffer_t *buffer) {
 	memset(&s, 0, sizeof(songstatus_t));
 
-	s.patterns = filedata[0x5C];
-	s.channels = filedata[0x5D];
+	// Populate songstatus
 
-	for(s.orders = 0; s.orders < 256; s.orders++) {
-		if(filedata[0x5F + s.orders] == 0xFF) break;
+	s.buf = buffer;
+	s.row = -1;
+	s.order = 0;
+	s.tempotick = 1;
+	s.audiotick = 1;
 
-		s.ordertable[s.orders] = filedata[0x5F + s.orders];
+	s.tempo = (s.buf->channels > 4) ? s.buf->channels : 4;
+	s.audiospeed = 60;
+
+	for(int ch = 0; ch < maxchannels; ch++) {
+		s.channel[ch].enabled = 1;
+		s.channel[ch].active = 0;
 	}
+
+	s.samplesplayed = 0;
+
+	// Generate vibrato table
 
 	double interval = pow(2, 1.0 / (12 * IBN));
 	notesHz[0] = 440;
 	double temphz = 27.5;
 	notesHz[IBN] = round(temphz);
 
-	for(i = IBN - 1; i >= 1; i--) {
+	for(int i = IBN - 1; i >= 1; i--) {
 		temphz /= interval;
 		if(temphz < 19) temphz = 19;
 		notesHz[i] = round(temphz);
@@ -46,33 +97,14 @@ int PTPlayer_Init(uint8_t *filedata) {
 
 	temphz = 27.5;
 
-	for(i = IBN + 1; i < maxnote * IBN; i++) {
+	for(int i = IBN + 1; i < maxnote * IBN; i++) {
 		temphz *= interval;
 		notesHz[i] = round(temphz);
 	}
 
-	s.tempo = (s.channels > 4) ? s.channels : 4;
-	s.audiospeed = 60;
-
-	for(ch = 0; ch < maxchannels; ch++) {
-		s.channel[ch].enabled = 1;
-		s.channel[ch].active = 0;
-	}
-
-	for(i = 0; i < vibtablesize; i++) {
+	for(int i = 0; i < vibtablesize; i++) {
 		VibTable[i] = round(vibtabledepth * sin(((double)i) * M_PI / vibtablesize * 2));
 	}
-
-	s.data = (uint16_t *)(filedata + 0x15F);
-
-	s.row = 0x3F;
-	s.order = -1;
-	s.tempotick = 1;
-	s.audiotick = 1;
-
-	samplesplayed = 0;
-
-	return 1;
 }
 
 songstatus_t *PTPlayer_GetStatus() {
@@ -92,34 +124,34 @@ void PTPlayer_ProcessTick() {
 			s.row = 0;
 		}
 
-		for(ch = 0; ch < s.channels; ch++) {
+		for(ch = 0; ch < s.buf->channels; ch++) {
 			switch(s.channel[ch].effect) {
-				case 5:
+				case 0xB:
 					s.order = s.channel[ch].parm1;
 					s.row = 0;
 					break;
 
-				case 6:
+				case 0xD:
 					s.order++;
 					s.row = s.channel[ch].parm1;
 					break;
 			}
 		}
 
-		if(s.order >= s.orders) s.order = 0;
+		if(s.order >= s.buf->orders) s.order = 0;
 
-		s.rowdata = s.data + (s.ordertable[s.order] * 64 + s.row) * s.channels;
+		unpacked_t *rowdata = s.buf->data[s.buf->ordertable[s.order]][s.row];
 
-		for(ch = 0; ch < s.channels; ch++) {
-			s.channel[ch].note = s.rowdata[ch] >> 9;
-			s.channel[ch].effectraw = s.rowdata[ch] & 0x1FF;
-			s.channel[ch].effect = (s.rowdata[ch] >> 6) & 7;
+		for(ch = 0; ch < s.buf->channels; ch++) {
+			s.channel[ch].note = rowdata[ch].note;
+			s.channel[ch].effect = rowdata[ch].effect;
+			s.channel[ch].effectraw = rowdata[ch].effectval;
 
 			if(s.channel[ch].effect == 0 || s.channel[ch].effect == 4) {
-				s.channel[ch].parm1 = (s.rowdata[ch] >> 3) & 7;
-				s.channel[ch].parm2 = s.rowdata[ch] & 7;
+				s.channel[ch].parm1 = (rowdata[ch].effectval >> 4) & 0xF;
+				s.channel[ch].parm2 = rowdata[ch].effectval & 0xF;
 			} else {
-				s.channel[ch].parm1 = s.rowdata[ch] & 63;
+				s.channel[ch].parm1 = rowdata[ch].effectval;
 				s.channel[ch].parm2 = 0;
 			}
 
@@ -149,7 +181,7 @@ void PTPlayer_ProcessTick() {
 					s.channel[ch].vibindex %= vibtablesize;
 					break;
 
-				case 7:
+				case 0xF:
 					if(s.channel[ch].parm1 > 0x20) {
 						s.audiospeed = s.channel[ch].parm1;
 					} else {
@@ -164,8 +196,8 @@ void PTPlayer_ProcessTick() {
 	} else {
 		// Process effects
 
-		for(ch = 0; ch < s.channels; ch++) {
-			if(s.channel[ch].effectraw) {
+		for(ch = 0; ch < s.buf->channels; ch++) {
+			if(s.channel[ch].effect || s.channel[ch].effectraw) {
 				switch(s.channel[ch].effect) {
 					case 0:
 						switch((s.tempo - s.tempotick) % 3) {
@@ -240,18 +272,18 @@ int PTPlayer_PlayInt16(int16_t *buf, int bufsize, int audiofreq) {
 
 		// Render the sound
 
-		for(ch = 0; ch < s.channels; ch++) {
+		for(ch = 0; ch < s.buf->channels; ch++) {
 			if(s.channel[ch].active && s.channel[ch].enabled) {
 				s.channel[ch].ctr += s.channel[ch].freq;
 
 				if((s.channel[ch].ctr / (audiofreq / 2)) & 1) {
-					buf[i] += 32767 / s.channels;
+					buf[i] += 32767 / s.buf->channels;
 				}
 			}
 		}
 	}
 
-	return samplesplayed += bufsize;
+	return s.samplesplayed += bufsize;
 }
 
 int PTPlayer_PlayFloat(float *buf, int bufsize, int audiofreq) {
@@ -270,18 +302,18 @@ int PTPlayer_PlayFloat(float *buf, int bufsize, int audiofreq) {
 
 		// Render the sound
 
-		for(ch = 0; ch < s.channels; ch++) {
+		for(ch = 0; ch < s.buf->channels; ch++) {
 			if(s.channel[ch].active && s.channel[ch].enabled) {
 				s.channel[ch].ctr += s.channel[ch].freq;
 
 				if((s.channel[ch].ctr / (audiofreq / 2)) & 1) {
-					buf[i] += 1.0 / ((float)s.channels);
+					buf[i] += 1.0 / ((float)s.buf->channels);
 				}
 			}
 		}
 	}
 
-	return samplesplayed += bufsize;
+	return s.samplesplayed += bufsize;
 }
 
 int notectr = 0;
@@ -297,7 +329,7 @@ void PTPlayer_PlayNoteInt16(uint8_t note, int16_t *buf, int bufsize, int audiofr
 		notectr += notesHz[note * IBN];
 
 		if((notectr / (audiofreq / 2)) & 1) {
-			buf[i] += 32767 / s.channels;
+			buf[i] += 32767 / s.buf->channels;
 		}
 	}
 }
@@ -313,7 +345,7 @@ void PTPlayer_PlayNoteFloat(uint8_t note, float *buf, int bufsize, int audiofreq
 		notectr += notesHz[note * IBN];
 
 		if((notectr / (audiofreq / 2)) & 1) {
-			buf[i] += 1.0 / ((float)s.channels);
+			buf[i] += 1.0 / ((float)s.buf->channels);
 		}
 	}
 

@@ -34,8 +34,10 @@ int main(int argc, char *argv[]) {
 	fread(data, 1, size, mt);
 	fclose(mt);
 
-	if(!PTPlayer_Init(data)) {
-		printf("PTPlayer_Init() error!\n");
+	buffer_t *buffer = malloc(sizeof(buffer_t));
+
+	if(PTPlayer_UnpackFile(data, buffer)) {
+		printf("PTPlayer_LoadFile() error!\n");
 		exit(1);
 	}
 
@@ -58,9 +60,9 @@ int main(int argc, char *argv[]) {
 		Pa_WriteStream(stream, buf, 1024);
 
 		printf("Playing %ds - row: %02X, order: %02d/%02d",
-			samples / AUDIOFREQ, status->row, status->order, status->orders);
+			samples / AUDIOFREQ, status->row, status->order, status->buf->orders);
 
-		for(int ch = 0; ch < status->channels; ch++) {
+		for(int ch = 0; ch < status->buf->channels; ch++) {
 			if(status->channel[ch].active)
 				printf(" %d", status->channel[ch].freq);
 			else
