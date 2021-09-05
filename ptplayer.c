@@ -3,9 +3,9 @@
 #include <string.h>
 
 #define maxchannels 16
-#define IBN 8
+#define IBN 16
 #define maxnote (3 + (8 * 12) + 1)
-#define vibtablesize 32
+#define vibtablesize 64
 #define vibtabledepth (IBN * 8)
 
 songstatus_t s;
@@ -49,6 +49,8 @@ int PTPlayer_UnpackFile(uint8_t *filedata, buffer_t *buffer) {
 					i->effectval = (i->effect == 0 || i->effect == 4) ?
 					(((in[ptr] & 0x38) << 1) | (in[ptr] & 7)) :
 					(in[ptr] & 0x3F);
+
+					if(i->effect == 4) i->effectval *= 2;
 				}
 			}
 		}
@@ -348,5 +350,4 @@ void PTPlayer_PlayNoteFloat(uint8_t note, float *buf, int bufsize, int audiofreq
 			buf[i] += 1.0 / ((float)s.buf->channels);
 		}
 	}
-
 }
