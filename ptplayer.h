@@ -1,5 +1,8 @@
 #include <stdint.h>
 
+#ifndef PTPLAYER_H
+#define PTPLAYER_H
+
 #define MAX_PT_SIZE (\
 	0x0D /* File header */ + \
 	256 /* Order table */ + \
@@ -51,3 +54,5 @@ int PTPlayer_PlayFloat(float *buf, int bufsize, int audiofreq);
 
 void PTPlayer_PlayNoteInt16(uint8_t note, int16_t *buf, int bufsize, int audiofreq);
 void PTPlayer_PlayNoteFloat(uint8_t note, float *buf, int bufsize, int audiofreq);
+
+#endif
