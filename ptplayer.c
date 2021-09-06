@@ -14,10 +14,10 @@ short notesHz[maxnote * IBN];
 short VibTable[vibtablesize];
 
 int PTPlayer_UnpackFile(uint8_t *filedata, buffer_t *buffer) {
-	if(filedata[0x0B] > maxchannels)
-		return -1;
-
 	if(!memcmp(filedata, "\x08MONOTONE", 9)) {
+		if(filedata[0x5D] > maxchannels)
+			return -1;
+
 		// Convert Monotone data
 
 		int orders;
@@ -59,6 +59,9 @@ int PTPlayer_UnpackFile(uint8_t *filedata, buffer_t *buffer) {
 
 		return 0;
 	} else if(!memcmp(filedata, "\x08POLYTONE", 9)) {
+		if(filedata[0x0B] > maxchannels)
+			return -1;
+
 		// Unpack Polytone data
 
 		buffer->channels = filedata[0x0B];

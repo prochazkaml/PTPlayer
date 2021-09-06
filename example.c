@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
 	buffer_t *buffer = malloc(sizeof(buffer_t));
 
 	if(PTPlayer_UnpackFile(data, buffer)) {
-		printf("PTPlayer_LoadFile() error!\n");
+		printf("PTPlayer_UnpackFile() error!\n");
 		exit(1);
 	}
 
