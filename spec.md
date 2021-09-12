@@ -47,7 +47,7 @@ Offset|Description
 -|-
 0x00|**Channel descriptor**<br>Bit 7: Last channel entry in the row record<br>Bit 6: Note byte follows<br>Bit 5: Effect byte follows<br>Bit 4: *unused*<br>Bits 3-0: Channel number (0-15)
 If bit 6 set: 0x01|**Note data**<br>Bit 7: *unused*<br>Bits 6-0: Note ID (0 = empty, 1-88 = A0-C8, 127 = OFF)
-If bits 5 & 6 set: 0x02<br>If bit 5 set: 0x01|**Effect data**<br>Bits 7-4: Short effect value (0-13, 14 = use last known value, 15 = read another byte for a full 8-bit value)<br>Bits 3-0: Effect type (see below in the Effect reference)
+If bits 5 & 6 set: 0x02<br>If bit 5 set: 0x01|**Effect data**<br>Bits 7-4: Short effect value (0-13, 14 = use the same value as in the previous effect, 15 = read another byte for a full 8-bit value)<br>Bits 3-0: Effect type (see below in the Effect reference)
 If bits 7-4 from the<br>previous byte == 15:<br>If bits 5 & 6 set: 0x03<br>If bit 5 set: 0x02|**Full-length effect value**<br>Bits 7-0: Effect value
 
 ### Effect reference
