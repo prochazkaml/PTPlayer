@@ -6,8 +6,6 @@ The [Polytone](https://github.com/prochazkaml/Polytone) file format is based on 
 - Effect values are no longer limited to 0-63/0-7, now they can be from the full 0-255/0-15 range
 - Expandable: Potential support for more effects & instruments in the future
 
-The [ptconv](https://github.com/prochazkaml/ptconv) utility may be used to convert existing Monotone files into Polytone files. Polytone (the software) already has this functionality built-in.
-
 ## File header
 
 A Polytone file starts with a header, which is mostly similar to the Monotone counterpart.
