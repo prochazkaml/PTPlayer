@@ -35,6 +35,8 @@ int PTPlayer_UnpackFile(uint8_t *filedata, buffer_t *buffer) {
 		int ptr;
 		unpacked_t *i;
 
+		memset(buffer->data, 0, sizeof(buffer->data));
+
 		const uint8_t effect_lut[] = {
 			0, 1, 2, 3, 4, 0xB, 0xD, 0xF
 		};
