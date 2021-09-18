@@ -6,8 +6,6 @@ The [Polytone](https://github.com/prochazkaml/Polytone) file format is based on 
 - Effect values are no longer limited to 0-63/0-7, now they can be from the full 0-255/0-15 range
 - Expandable: Potential support for more effects & instruments in the future
 
-The [ptconv](https://github.com/prochazkaml/ptconv) utility may be used to convert existing Monotone files into Polytone files. Polytone (the software) already has this functionality built-in.
-
 ## File header
 
 A Polytone file starts with a header, which is mostly similar to the Monotone counterpart.
@@ -48,8 +46,8 @@ Channel entries contain the actual note/effect data for each channel (that is no
 Offset|Description
 -|-
 0x00|**Channel descriptor**<br>Bit 7: Last channel entry in the row record<br>Bit 6: Note byte follows<br>Bit 5: Effect byte follows<br>Bit 4: *unused*<br>Bits 3-0: Channel number (0-15)
-If bit 6 set: 0x01|**Note data**<br>Bit 7: Use the same effect as in the last note from the same channel<br>Bits 6-0: Note ID (0 = empty, 1-88 = A0-C8, 127 = OFF)
-If bits 5 & 6 set: 0x02<br>If bit 5 set: 0x01|**Effect data**<br>Bits 7-4: Short effect value (0-13, 14 = use last known value, 15 = read another byte for a full 8-bit value)<br>Bits 3-0: Effect type (see below in the Effect reference)
+If bit 6 set: 0x01|**Note data**<br>Bit 7: *unused*<br>Bits 6-0: Note ID (0 = empty, 1-88 = A0-C8, 127 = OFF)
+If bits 5 & 6 set: 0x02<br>If bit 5 set: 0x01|**Effect data**<br>Bits 7-4: Short effect value (0-13, 14 = use the same value as in the previous effect, 15 = read another byte for a full 8-bit value)<br>Bits 3-0: Effect type (see below in the Effect reference)
 If bits 7-4 from the<br>previous byte == 15:<br>If bits 5 & 6 set: 0x03<br>If bit 5 set: 0x02|**Full-length effect value**<br>Bits 7-0: Effect value
 
 ### Effect reference
