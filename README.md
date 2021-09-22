@@ -7,7 +7,7 @@ However, unlike OpenMPT, which is sample/FM-based, MONOTONE is aimed for much si
 it only supports one kind of instrument (a square wave) at a constant volume.
 Its music file format (.MON files) is usually only a couple of kB in size.
 
-My first attempt at .MON playback was MTPlayer, which was mostly just a translation of the original MONOTONE tracker source code from Pascal to C.
+My first attempt at .MON playback was [MTPlayer](https://github.com/prochazkaml/MTPlayer), which was mostly just a translation of the original MONOTONE tracker source code from Pascal to C.
 PTPlayer is just an expansion of that library, with support for the new Polytone files.
 
 For more info about MONOTONE & example .MON files, please visit the [MONOTONE GitHub repo](https://github.com/MobyGamer/MONOTONE).
