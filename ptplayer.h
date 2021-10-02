@@ -39,7 +39,7 @@ typedef struct {
 typedef struct {
 	buffer_t *buf;
 
-	int row, order, tempo, tempotick, audiospeed, audiotick;
+	int row, order, tempo, tempotick, audiospeed, audiotick, allowadvance;
 	int samplesplayed;
 
 	channel_t channel[16];

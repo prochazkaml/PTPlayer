@@ -138,6 +138,7 @@ void PTPlayer_Reset(buffer_t *buffer) {
 	s.order = 0;
 	s.tempotick = 1;
 	s.audiotick = 1;
+	s.allowadvance = 1;
 
 	s.tempo = (s.buf->channels > 4) ? s.buf->channels : 4;
 	s.audiospeed = 60;
@@ -181,8 +182,10 @@ songstatus_t *PTPlayer_GetStatus() {
 void PTPlayer_ProcessTick() {
 	int i, ch;
 
-	if(!--s.tempotick) {
+	if(!--s.tempotick && s.allowadvance != 0) {
 		// Process a new row
+
+		if(s.allowadvance == -1) s.allowadvance = 0;
 
 		if(++s.row >= 0x40) {
 			// Process the next order
