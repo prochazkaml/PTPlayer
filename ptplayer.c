@@ -60,7 +60,7 @@ int PTPlayer_UnpackFile(uint8_t *filedata, buffer_t *buffer) {
 		PTPlayer_Reset(buffer);
 
 		return 0;
-	} else if(!memcmp(filedata, "\x08POLYTONE", 9)) {
+	} else if(!memcmp(filedata, "\x08POLYTONE\x01", 10)) {
 		if(filedata[0x0B] > maxchannels)
 			return -1;
 
